@@ -1,0 +1,29 @@
+# Зависимости
+node_modules/
+package-lock.json
+
+# Переменные окружения
+.env
+
+# Логи
+logs/
+*.log
+npm-debug.log*
+
+# Загруженные файлы
+uploads/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Временные файлы
+*.tmp
+.cache/
