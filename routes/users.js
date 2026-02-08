@@ -24,13 +24,13 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10485760 }, // 10MB вместо 5MB
+  limits: { fileSize: parseInt(process.env.MAX_AVATAR_SIZE) || 5242880 }, // 5MB
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    const allowedTypes = (process.env.ALLOWED_AVATAR_TYPES || 'image/jpeg,image/png,image/webp').split(',');
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Неподдерживаемый формат. Разрешены: JPEG, PNG, WebP, GIF'));
+      cb(new Error('Неподдерживаемый формат файла'));
     }
   }
 });
@@ -150,11 +150,7 @@ router.post('/me/avatar', auth, upload.single('avatar'), async (req, res) => {
     if (oldAvatar.rows[0]?.avatar_url) {
       const oldPath = path.join(__dirname, '..', oldAvatar.rows[0].avatar_url);
       if (fs.existsSync(oldPath)) {
-        try {
-          fs.unlinkSync(oldPath);
-        } catch (err) {
-          console.error('Error deleting old avatar:', err);
-        }
+        fs.unlinkSync(oldPath);
       }
     }
 
@@ -172,56 +168,7 @@ router.post('/me/avatar', auth, upload.single('avatar'), async (req, res) => {
 
   } catch (error) {
     console.error('Upload avatar error:', error);
-    
-    // Удаляем загруженный файл если была ошибка БД
-    if (req.file) {
-      const filePath = path.join(__dirname, '..', 'uploads', 'avatars', req.file.filename);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    }
-    
-    res.status(500).json({ 
-      error: 'Ошибка при загрузке аватара',
-      details: error.message 
-    });
-  }
-});
-
-// НОВЫЙ РОУТ: Удаление аватарки
-router.delete('/me/avatar', auth, async (req, res) => {
-  try {
-    // Получение текущего аватара
-    const user = await db.query(
-      'SELECT avatar_url FROM users WHERE id = $1',
-      [req.userId]
-    );
-
-    if (!user.rows[0]?.avatar_url) {
-      return res.status(404).json({ error: 'Аватар не установлен' });
-    }
-
-    const avatarPath = path.join(__dirname, '..', user.rows[0].avatar_url);
-    
-    // Удаление файла
-    if (fs.existsSync(avatarPath)) {
-      fs.unlinkSync(avatarPath);
-    }
-
-    // Обновление БД
-    await db.query(
-      'UPDATE users SET avatar_url = NULL WHERE id = $1',
-      [req.userId]
-    );
-
-    res.json({
-      success: true,
-      message: 'Аватар удален'
-    });
-
-  } catch (error) {
-    console.error('Delete avatar error:', error);
-    res.status(500).json({ error: 'Ошибка при удалении аватара' });
+    res.status(500).json({ error: 'Ошибка при загрузке аватара' });
   }
 });
 
